@@ -8,11 +8,15 @@ app.use(express.json());
 app.use(cors());
 
 // Servir los archivos estáticos de la carpeta public (HTML, CSS, JS del frontend)
+// Nota: Si mueves el Dockerfile dentro de backend-node, asegúrate de que la carpeta 'public' 
+// esté dentro de 'backend-node' o ajusta esta ruta.
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuración de la conexión a MySQL (Servidor Debian / Dokploy)
 const pool = mysql.createPool({
-    host: '192.168.0.107',
+    // IMPORTANTE: Si corres esto en Docker, '192.168.0.107' puede no ser accesible.
+    // En Windows/Mac usa 'host.docker.internal'. En Linux usa la IP de tu host o el nombre del servicio.
+    host: '192.168.0.107', 
     port: 3307,
     user: 'root',
     password: 'admin',
@@ -24,8 +28,8 @@ const pool = mysql.createPool({
 
 // --- RUTAS DE CIUDADES ---
 
-// Obtener todas las ciudades cargadas
-app.get('/ciudades', async (req, res) => {
+// Obtener todas las ciudades cargadas (CORREGIDO: prefijo /api)
+app.get('/api/ciudades', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM ciudad');
         res.json(rows);
@@ -37,17 +41,14 @@ app.get('/ciudades', async (req, res) => {
 
 // --- RUTAS DE VIAJES ---
 
-// Registrar un nuevo viaje (Asociado al UUID del usuario de Keycloak)
-app.post('/viajes', async (req, res) => {
+// Registrar un nuevo viaje (CORREGIDO: prefijo /api y lectura desde req.body)
+app.post('/api/viajes', async (req, res) => {
     try {
-        const { ciudad_id, fecha_viaje, motivo } = req.body;
-        
-        // Simulación: El UUID del usuario vendría del token JWT decodificado por un middleware.
-        // Por ahora lo puedes mandar en el header (ej. 'x-usuario-uuid') para probar.
-        const usuario_uuid = req.headers['x-usuario-uuid'];
+        // Leemos todo directamente del body, que es como lo envía el index.html
+        const { ciudad_id, fecha_viaje, motivo, usuario_uuid } = req.body;
 
         if (!usuario_uuid) {
-            return res.status(401).json({ error: 'No se encontró el UUID del usuario (Falta header x-usuario-uuid)' });
+            return res.status(401).json({ error: 'No se encontró el UUID del usuario en la petición' });
         }
 
         if (!ciudad_id || !fecha_viaje) {
@@ -67,8 +68,8 @@ app.post('/viajes', async (req, res) => {
     }
 });
 
-// Obtener los viajes de un usuario específico usando su UUID
-app.get('/viajes/:uuid', async (req, res) => {
+// Obtener los viajes de un usuario específico usando su UUID (CORREGIDO: prefijo /api)
+app.get('/api/viajes/:uuid', async (req, res) => {
     try {
         const { uuid } = req.params;
 
@@ -86,8 +87,8 @@ app.get('/viajes/:uuid', async (req, res) => {
     }
 });
 
-// Iniciar servidor
-const PORT = 3001;
+// Iniciar servidor (CORREGIDO: usar variable de entorno para Docker)
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
 });

@@ -2,17 +2,10 @@ version: '3.8'
 
 services:
   red-comunitaria-app:
-    build: .
+    build: ./backend-node  # <-- Apuntamos a la carpeta donde está el Dockerfile
     container_name: servicio-b-viajes
     restart: always
     ports:
-      - "3001:3000"
+      - "3001:3001"        # <-- Puerto PC : Puerto Contenedor (Deben coincidir)
     environment:
-      - PORT=3001
-    # Opcional: si quieres asegurarte de que pertenezca a la misma red de Docker si lo requieres
-    # networks:
-    #   - red-comunitaria
-
-# networks:
-#   red-comunitaria:
-#     external: true
+      - PORT=3001          # <-- Node escuchará en 3001 dentro del contenedor
