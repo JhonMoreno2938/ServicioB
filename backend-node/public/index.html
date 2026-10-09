@@ -9,12 +9,17 @@
 <body class="bg-light">
 
     <div class="container mt-5">
-        <!-- Barra superior -->
+        <!-- Barra superior con botón de logout -->
         <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-white shadow-sm rounded">
             <h2>Panel de Viajes (Servicio B)</h2>
-            <div>
-                <span class="text-muted">Usuario Activo:</span>
-                <strong id="nombreUsuarioText" class="text-primary">Cargando...</strong>
+            <div class="d-flex align-items-center gap-3">
+                <span>
+                    <span class="text-muted">Usuario Activo:</span>
+                    <strong id="nombreUsuarioText" class="text-primary">Cargando...</strong>
+                </span>
+                <button id="btnLogout" class="btn btn-danger btn-sm" onclick="cerrarSesion()">
+                    🚪 Cerrar Sesión
+                </button>
             </div>
         </div>
 
