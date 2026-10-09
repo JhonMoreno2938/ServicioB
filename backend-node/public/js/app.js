@@ -81,19 +81,12 @@ if (userTextElement) {
 function cerrarSesion() {
     console.log('👋 Cerrando sesión desde el Servicio B...');
 
-    // 1. Limpiamos el sessionStorage (credenciales locales del Servicio B)
+    // 1. Limpiamos el sessionStorage del Servicio B
     sessionStorage.clear();
 
-    // 2. Intentamos limpiar también el localStorage del Servicio A
-    //    (aunque es un dominio diferente, algunos navegadores lo permiten si es la misma IP)
-    try {
-        localStorage.clear();
-    } catch (e) {
-        console.warn('⚠️ No se pudo limpiar el localStorage de otro dominio');
-    }
-
-    // 3. Redirigimos al login del Servicio A
-    window.location.href = 'http://192.168.0.107/index.html';
+    // 2. Redirigimos al login del Servicio A con ?logout=true
+    //    para que el login del Servicio A limpie su localStorage
+    window.location.href = 'http://192.168.0.107/index.html?logout=true';
 }
 
 // ============================================
