@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Comunitaria - Gestión de Viajes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <div class="container mt-5">
+        <!-- Barra superior reflejando el usuario que viene del Servicio A -->
+        <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-white shadow-sm rounded">
+            <h2>Panel de Viajes (Servicio B)</h2>
+            <div>
+                <span class="text-muted">Usuario Activo:</span>
+                <strong id="nombreUsuarioText" class="text-primary">Cargando...</strong>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Formulario de Registro -->
+            <div class="col-md-5 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h4 class="card-title mb-3">Registrar Viaje</h4>
+                        <form id="viajeForm">
+                            <div class="mb-3">
+                                <label class="form-label">Ciudad de Destino:</label>
+                                <select class="form-select" id="ciudadSelect" required>
+                                    <option value="">Cargando ciudades...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Fecha:</label>
+                                <input type="date" class="form-control" id="fechaViaje" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Motivo:</label>
+                                <input type="text" class="form-control" id="motivo" placeholder="Ej. Vacaciones, Visita técnica">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Guardar Viaje</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Viajes -->
+            <div class="col-md-7">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h4 class="card-title mb-3">Mis Viajes Registrados</h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Ciudad</th>
+                                        <th>País</th>
+                                        <th>Fecha</th>
+                                        <th>Motivo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaViajesBody">
+                                    <tr><td colspan="4" class="text-center">Cargando viajes...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Capturamos el usuario dinámicamente. 
+        // Si el Servicio A redirige pasando el usuario por parámetro en la URL (ej: ?usuario=usuario31), lo toma de ahí.
+        // Si no viene nada, toma uno por defecto para pruebas locales.
+        const urlParams = new URLSearchParams(window.location.search);
+        const USUARIO_ACTUAL = urlParams.get('usuario') || 'usuario31'; 
+
+        // Mostramos el nombre exacto en la interfaz tal como viene del flujo principal
+        document.getElementById('nombreUsuarioText').innerText = USUARIO_ACTUAL;
+
+        async function cargarCiudades() {
+            try {
+                const res = await fetch('/api/ciudades');
+                const ciudades = await res.json();
+                const select = document.getElementById('ciudadSelect');
+                select.innerHTML = '<option value="">Seleccione una ciudad...</option>';
+                ciudades.forEach(c => {
+                    select.innerHTML += `<option value="${c.id}">${c.nombre} (${c.pais})</option>`;
+                });
+            } catch (err) {
+                console.error('Error cargando ciudades', err);
+            }
+        }
+
+        async function cargarViajes() {
+            try {
+                // Consultamos los viajes filtrando por el usuario autenticado que viene del Servicio A
+                const res = await fetch(`/api/viajes/${USUARIO_ACTUAL}`);
+                const viajes = await res.json();
+                const tbody = document.getElementById('tablaViajesBody');
+                tbody.innerHTML = '';
+
+                if (viajes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center">No hay viajes registrados para este usuario.</td></tr>';
+                    return;
+                }
+
+                viajes.forEach(v => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${v.ciudad}</td>
+                            <td>${v.pais}</td>
+                            <td>${v.fecha_viaje.split('T')[0]}</td>
+                            <td>${v.motivo || '-'}</td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error('Error cargando viajes', err);
+            }
+        }
+
+        document.getElementById('viajeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                ciudad_id: document.getElementById('ciudadSelect').value,
+                fecha_viaje: document.getElementById('fechaViaje'].value,
+                motivo: document.getElementById('motivo').value,
+                usuario_uuid: USUARIO_ACTUAL // Guardamos asociado al usuario del Servicio A
+            };
+
+            const res = await fetch('/api/viajes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                alert('¡Viaje registrado con éxito!');
+                document.getElementById('viajeForm').reset();
+                cargarViajes();
+            } else {
+                alert('Error al registrar el viaje');
+            }
+        });
+
+        window.onload = () => {
+            cargarCiudades();
+            cargarViajes();
+        };
+    </script>
+</body>
+</html>
