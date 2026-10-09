@@ -72,18 +72,36 @@
     </div>
 
     <script>
-        // Capturamos el usuario dinámicamente desde la URL (enviado por el Servicio A)
+        // ============================================
+        // SERVICIO B - GESTIÓN DE VIAJES
+        // ============================================
+
+        // 1. Obtener el usuario desde la URL (enviado por el Servicio A)
         const urlParams = new URLSearchParams(window.location.search);
-        const USUARIO_ACTUAL = urlParams.get('usuario') || 'usuario31'; 
+        const USUARIO_ACTUAL = urlParams.get('usuario');
 
-        // Mostramos el nombre exacto en la interfaz
-        document.getElementById('nombreUsuarioText').innerText = USUARIO_ACTUAL;
+        // Si NO hay usuario en la URL, mostramos error y redirigimos
+        if (!USUARIO_ACTUAL) {
+            console.error('❌ No se recibió el usuario en la URL');
+            document.getElementById('nombreUsuarioText').innerHTML = 
+                '<span class="text-danger">Error: Usuario no identificado</span>';
+            
+            // Opcional: Redirigir al login del Servicio A después de 3 segundos
+            setTimeout(() => {
+                window.location.href = 'http://192.168.0.107/index.html';
+            }, 3000);
+        } else {
+            console.log('✅ Usuario recibido:', USUARIO_ACTUAL);
+            document.getElementById('nombreUsuarioText').innerText = USUARIO_ACTUAL;
+        }
 
+        // ============================================
+        // CARGAR CIUDADES
+        // ============================================
         async function cargarCiudades() {
             try {
-                // CORREGIDO: Ruta con prefijo /api
                 const res = await fetch('/api/ciudades');
-                if (!res.ok) throw new Error('Error al obtener ciudades');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 
                 const ciudades = await res.json();
                 const select = document.getElementById('ciudadSelect');
@@ -92,17 +110,23 @@
                 ciudades.forEach(c => {
                     select.innerHTML += `<option value="${c.id}">${c.nombre} (${c.pais})</option>`;
                 });
+                console.log(`✅ ${ciudades.length} ciudades cargadas`);
             } catch (err) {
-                console.error('Error cargando ciudades', err);
-                document.getElementById('ciudadSelect').innerHTML = '<option value="">Error al cargar</option>';
+                console.error('❌ Error cargando ciudades:', err);
+                document.getElementById('ciudadSelect').innerHTML = 
+                    '<option value="">Error al cargar ciudades</option>';
             }
         }
 
+        // ============================================
+        // CARGAR VIAJES DEL USUARIO
+        // ============================================
         async function cargarViajes() {
+            if (!USUARIO_ACTUAL) return; // No cargar si no hay usuario
+            
             try {
-                // CORREGIDO: Ruta con prefijo /api
                 const res = await fetch(`/api/viajes/${USUARIO_ACTUAL}`);
-                if (!res.ok) throw new Error('Error al obtener viajes');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 
                 const viajes = await res.json();
                 const tbody = document.getElementById('tablaViajesBody');
@@ -114,9 +138,7 @@
                 }
 
                 viajes.forEach(v => {
-                    // Aseguramos que la fecha se muestre correctamente
                     const fechaMostrar = v.fecha_viaje ? v.fecha_viaje.split('T')[0] : 'N/A';
-                    
                     tbody.innerHTML += `
                         <tr>
                             <td>${v.ciudad}</td>
@@ -126,25 +148,33 @@
                         </tr>
                     `;
                 });
+                console.log(`✅ ${viajes.length} viajes cargados para ${USUARIO_ACTUAL}`);
             } catch (err) {
-                console.error('Error cargando viajes', err);
-                document.getElementById('tablaViajesBody').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error al cargar viajes</td></tr>';
+                console.error('❌ Error cargando viajes:', err);
+                document.getElementById('tablaViajesBody').innerHTML = 
+                    '<tr><td colspan="4" class="text-center text-danger">Error al cargar viajes</td></tr>';
             }
         }
 
+        // ============================================
+        // REGISTRAR NUEVO VIAJE
+        // ============================================
         document.getElementById('viajeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            if (!USUARIO_ACTUAL) {
+                alert('Error: No hay usuario identificado');
+                return;
+            }
+
             const data = {
                 ciudad_id: document.getElementById('ciudadSelect').value,
-                // CORREGIDO: Aquí estaba el error de sintaxis 'fechaViaje'] -> 'fechaViaje')
                 fecha_viaje: document.getElementById('fechaViaje').value,
                 motivo: document.getElementById('motivo').value,
-                usuario_uuid: USUARIO_ACTUAL // Se envía el usuario para asociarlo
+                usuario_uuid: USUARIO_ACTUAL
             };
 
             try {
-                // CORREGIDO: Ruta con prefijo /api
                 const res = await fetch('/api/viajes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -154,18 +184,20 @@
                 if (res.ok) {
                     alert('¡Viaje registrado con éxito!');
                     document.getElementById('viajeForm').reset();
-                    cargarViajes(); // Recargamos la tabla
+                    cargarViajes();
                 } else {
                     const errorData = await res.json();
                     alert(`Error al registrar el viaje: ${errorData.error || 'Desconocido'}`);
                 }
             } catch (err) {
-                console.error('Error al enviar el formulario', err);
+                console.error('❌ Error al enviar el formulario:', err);
                 alert('Error de conexión al registrar el viaje');
             }
         });
 
-        // Inicializar la página
+        // ============================================
+        // INICIALIZAR PÁGINA
+        // ============================================
         window.onload = () => {
             cargarCiudades();
             cargarViajes();
