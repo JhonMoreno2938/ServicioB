@@ -72,33 +72,38 @@
     </div>
 
     <script>
-        // Capturamos el usuario dinámicamente. 
-        // Si el Servicio A redirige pasando el usuario por parámetro en la URL (ej: ?usuario=usuario31), lo toma de ahí.
-        // Si no viene nada, toma uno por defecto para pruebas locales.
+        // Capturamos el usuario dinámicamente desde la URL (enviado por el Servicio A)
         const urlParams = new URLSearchParams(window.location.search);
         const USUARIO_ACTUAL = urlParams.get('usuario') || 'usuario31'; 
 
-        // Mostramos el nombre exacto en la interfaz tal como viene del flujo principal
+        // Mostramos el nombre exacto en la interfaz
         document.getElementById('nombreUsuarioText').innerText = USUARIO_ACTUAL;
 
         async function cargarCiudades() {
             try {
+                // CORREGIDO: Ruta con prefijo /api
                 const res = await fetch('/api/ciudades');
+                if (!res.ok) throw new Error('Error al obtener ciudades');
+                
                 const ciudades = await res.json();
                 const select = document.getElementById('ciudadSelect');
                 select.innerHTML = '<option value="">Seleccione una ciudad...</option>';
+                
                 ciudades.forEach(c => {
                     select.innerHTML += `<option value="${c.id}">${c.nombre} (${c.pais})</option>`;
                 });
             } catch (err) {
                 console.error('Error cargando ciudades', err);
+                document.getElementById('ciudadSelect').innerHTML = '<option value="">Error al cargar</option>';
             }
         }
 
         async function cargarViajes() {
             try {
-                // Consultamos los viajes filtrando por el usuario autenticado que viene del Servicio A
+                // CORREGIDO: Ruta con prefijo /api
                 const res = await fetch(`/api/viajes/${USUARIO_ACTUAL}`);
+                if (!res.ok) throw new Error('Error al obtener viajes');
+                
                 const viajes = await res.json();
                 const tbody = document.getElementById('tablaViajesBody');
                 tbody.innerHTML = '';
@@ -109,44 +114,58 @@
                 }
 
                 viajes.forEach(v => {
+                    // Aseguramos que la fecha se muestre correctamente
+                    const fechaMostrar = v.fecha_viaje ? v.fecha_viaje.split('T')[0] : 'N/A';
+                    
                     tbody.innerHTML += `
                         <tr>
                             <td>${v.ciudad}</td>
                             <td>${v.pais}</td>
-                            <td>${v.fecha_viaje.split('T')[0]}</td>
+                            <td>${fechaMostrar}</td>
                             <td>${v.motivo || '-'}</td>
                         </tr>
                     `;
                 });
             } catch (err) {
                 console.error('Error cargando viajes', err);
+                document.getElementById('tablaViajesBody').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error al cargar viajes</td></tr>';
             }
         }
 
         document.getElementById('viajeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
             const data = {
                 ciudad_id: document.getElementById('ciudadSelect').value,
-                fecha_viaje: document.getElementById('fechaViaje'].value,
+                // CORREGIDO: Aquí estaba el error de sintaxis 'fechaViaje'] -> 'fechaViaje')
+                fecha_viaje: document.getElementById('fechaViaje').value,
                 motivo: document.getElementById('motivo').value,
-                usuario_uuid: USUARIO_ACTUAL // Guardamos asociado al usuario del Servicio A
+                usuario_uuid: USUARIO_ACTUAL // Se envía el usuario para asociarlo
             };
 
-            const res = await fetch('/api/viajes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
+            try {
+                // CORREGIDO: Ruta con prefijo /api
+                const res = await fetch('/api/viajes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
 
-            if (res.ok) {
-                alert('¡Viaje registrado con éxito!');
-                document.getElementById('viajeForm').reset();
-                cargarViajes();
-            } else {
-                alert('Error al registrar el viaje');
+                if (res.ok) {
+                    alert('¡Viaje registrado con éxito!');
+                    document.getElementById('viajeForm').reset();
+                    cargarViajes(); // Recargamos la tabla
+                } else {
+                    const errorData = await res.json();
+                    alert(`Error al registrar el viaje: ${errorData.error || 'Desconocido'}`);
+                }
+            } catch (err) {
+                console.error('Error al enviar el formulario', err);
+                alert('Error de conexión al registrar el viaje');
             }
         });
 
+        // Inicializar la página
         window.onload = () => {
             cargarCiudades();
             cargarViajes();
