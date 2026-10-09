@@ -3,6 +3,5 @@ WORKDIR /app
 COPY backend-node/package*.json ./
 RUN npm install --production
 COPY backend-node/ ./
-COPY public/ ./public/
 EXPOSE 3001
 CMD ["npm", "start"]

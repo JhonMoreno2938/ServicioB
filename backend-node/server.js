@@ -1,10 +1,14 @@
 const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// Servir los archivos estáticos de la carpeta public (HTML, CSS, JS del frontend)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuración de la conexión a MySQL (Servidor Debian / Dokploy)
 const pool = mysql.createPool({
