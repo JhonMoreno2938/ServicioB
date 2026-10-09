@@ -7,16 +7,12 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Servir los archivos estáticos de la carpeta public (HTML, CSS, JS del frontend)
-// Nota: Si mueves el Dockerfile dentro de backend-node, asegúrate de que la carpeta 'public' 
-// esté dentro de 'backend-node' o ajusta esta ruta.
+// Servir los archivos estáticos de la carpeta public
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuración de la conexión a MySQL (Servidor Debian / Dokploy)
+// Configuración de la conexión a MySQL
 const pool = mysql.createPool({
-    // IMPORTANTE: Si corres esto en Docker, '192.168.0.107' puede no ser accesible.
-    // En Windows/Mac usa 'host.docker.internal'. En Linux usa la IP de tu host o el nombre del servicio.
-    host: '192.168.0.107', 
+    host: '192.168.0.107',
     port: 3307,
     user: 'root',
     password: 'admin',
@@ -26,9 +22,9 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// --- RUTAS DE CIUDADES ---
-
-// Obtener todas las ciudades cargadas (CORREGIDO: prefijo /api)
+// ============================================
+// RUTAS DE CIUDADES
+// ============================================
 app.get('/api/ciudades', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM ciudad');
@@ -39,20 +35,21 @@ app.get('/api/ciudades', async (req, res) => {
     }
 });
 
-// --- RUTAS DE VIAJES ---
+// ============================================
+// RUTAS DE VIAJES
+// ============================================
 
-// Registrar un nuevo viaje (CORREGIDO: prefijo /api y lectura desde req.body)
+// Registrar un nuevo viaje
 app.post('/api/viajes', async (req, res) => {
     try {
-        // Leemos todo directamente del body, que es como lo envía el index.html
         const { ciudad_id, fecha_viaje, motivo, usuario_uuid } = req.body;
 
         if (!usuario_uuid) {
-            return res.status(401).json({ error: 'No se encontró el UUID del usuario en la petición' });
+            return res.status(401).json({ error: 'No se encontró el UUID del usuario' });
         }
 
         if (!ciudad_id || !fecha_viaje) {
-            return res.status(400).json({ error: 'Faltan campos obligatorios (ciudad_id, fecha_viaje)' });
+            return res.status(400).json({ error: 'Faltan campos obligatorios' });
         }
 
         const query = 'INSERT INTO viaje (usuario_uuid, ciudad_id, fecha_viaje, motivo) VALUES (?, ?, ?, ?)';
@@ -68,7 +65,7 @@ app.post('/api/viajes', async (req, res) => {
     }
 });
 
-// Obtener los viajes de un usuario específico usando su UUID (CORREGIDO: prefijo /api)
+// Obtener los viajes de un usuario
 app.get('/api/viajes/:uuid', async (req, res) => {
     try {
         const { uuid } = req.params;
@@ -87,8 +84,8 @@ app.get('/api/viajes/:uuid', async (req, res) => {
     }
 });
 
-// Iniciar servidor (CORREGIDO: usar variable de entorno para Docker)
+// Iniciar servidor
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`Servidor corriendo en el puerto ${PORT}`);
+    console.log(`✅ Servidor corriendo en el puerto ${PORT}`);
 });
